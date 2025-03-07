@@ -16,7 +16,7 @@ import org.polyfrost.example.testmacro.utils.posXYZ;
 import java.util.ArrayList;
 
 public class TickHandler {
-    private static EntityOtherPlayerMP fakeEntity = null; // Faux joueur
+    private static EntityOtherPlayerMP fakeEntity = null; // fake entity
 
     public static posXYZ[] positionQueue = new posXYZ[60];
     private static int macroTimer = 0;
@@ -64,7 +64,12 @@ public class TickHandler {
         inputarry = Player.inputs;
         tickLength = inputarry.size();
 
-        // spawn/reset entity on macro start
+        // kill entity if it exists
+        if (fakeEntity != null) {
+            fakeEntity.setDead();
+            fakeEntity = null;
+        }
+        // spawnentity on macro start
         initializeFakeEntity();
     }
 
@@ -113,7 +118,7 @@ public class TickHandler {
             if (macroTimer < tickLength) {
                 //player maccro
                 // need to add setting to not run the macro with the fake entity and the player same time
-/*
+
                 KeyBinding.setKeyBindState(options.keyBindForward.getKeyCode(), inputarry.get(macroTimer).isW());
                 KeyBinding.setKeyBindState(options.keyBindLeft.getKeyCode(), inputarry.get(macroTimer).isA());
                 KeyBinding.setKeyBindState(options.keyBindBack.getKeyCode(), inputarry.get(macroTimer).isS());
@@ -122,13 +127,11 @@ public class TickHandler {
                 KeyBinding.setKeyBindState(options.keyBindSprint.getKeyCode(), inputarry.get(macroTimer).isSprint());
                 KeyBinding.setKeyBindState(options.keyBindSneak.getKeyCode(), inputarry.get(macroTimer).isSneak());
                 player.rotationYaw = inputarry.get(macroTimer).getAngle();
-*/
+
                 // init fake entity
                 initializeFakeEntity();
                 // update entity
                 if (fakeEntity != null) {
-                    //need to fix the jump to not jump in air when the entity is not on the ground
-
                     double targetX = Player.xresult.get(macroTimer);
                     double targetY = Player.yresult.get(macroTimer);
                     double targetZ = Player.zresult.get(macroTimer);
@@ -137,6 +140,7 @@ public class TickHandler {
                     fakeEntity.setPositionAndRotation(targetX, targetY, targetZ, targetYaw, 0.0F);
 
                     // animation to look like a normal player
+                    fakeEntity.rotationYawHead = inputarry.get(macroTimer).getAngle(); // facing
                     fakeEntity.setSprinting(inputarry.get(macroTimer).isSprint()); // Sprint
                     fakeEntity.setSneaking(inputarry.get(macroTimer).isSneak()); // Sneak
                     fakeEntity.jumpMovementFactor = inputarry.get(macroTimer).isJump() ? 0.02F : 0.0F; // jump
@@ -157,12 +161,14 @@ public class TickHandler {
                 macroRunning = false;
                 macroTimer = 0;
                 KeyBinding.unPressAllKeys();
-
+/*
                 // kill entity on macro end
                 if (fakeEntity != null) {
                     fakeEntity.setDead();
                     fakeEntity = null;
                 }
+
+ */
             }
         }
     }

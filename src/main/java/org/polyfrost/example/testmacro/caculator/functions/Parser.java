@@ -2,6 +2,7 @@ package org.polyfrost.example.testmacro.caculator.functions;
 
 
 import org.polyfrost.example.testmacro.caculator.functions.nonmovement.SpecialFunction;
+import org.polyfrost.example.testmacro.caculator.functions.repeat.FunctionRepeat;
 import org.polyfrost.example.testmacro.caculator.utils.ParserException;
 import org.polyfrost.example.testmacro.caculator.utils.ParserFunctions;
 
@@ -31,6 +32,9 @@ public class Parser {
         String variable_name = "";
         float variable_value = 0;
         Hashtable<String,Float> variables = new Hashtable<String,Float>();
+        int nestedLevel = 0; // Level of nested parentheses
+        String repeatInner = ""; // Inner command to be repeated
+        int repeatCount = 0; // Number of times to repeat the inner command
 
         //start zOF
         player.xCoords.add(player.xOf); player.xCoords.add(player.xOf);
@@ -38,11 +42,11 @@ public class Parser {
 
         //start scanning
         for (int i = 0; i < text.length(); i++) {
-            if (state == 0) { //searching for function
-                if (text.charAt(i) == ' ') { //space, skip
+            if (state == 0) { // State 0: Searching for a function
+                if (text.charAt(i) == ' ') { // Skip spaces
                     continue;
 
-                } else if (text.charAt(i) == '|') { //reset
+                } else if (text.charAt(i) == '|') { //reset position
                     player.x = 0;
                     player.z = 0;
 
@@ -65,10 +69,17 @@ public class Parser {
 
                 }
 
-            } else if (state == 1) { //currently reading function, looking for opening parenthesis
+            } else if (state == 1) { // State 1: Reading function name, looking for opening parenthesis
                 if (text.charAt(i) == '(') { //start arguments
-                    state = 2;
+                    if (current_function.equalsIgnoreCase("r") || current_function.equalsIgnoreCase("repeat")) {
+                        state = 5; // Switch to repeat parsing state
+                        nestedLevel = 1;
+                        repeatInner = ""; // Reset for each new repeat
+                        repeatCount = 0;
+                    } else {
+                        state = 2; // Switch to argument parsing state
 
+                    }
                 } else if (text.charAt(i) == ' ') { //execute and end function
                     //run function
                     run_function(player, current_function, duration, facing, modifiers, effects);
@@ -121,7 +132,7 @@ public class Parser {
                             float variable = Float.parseFloat(variable_name);
                             throw new ParserException("Error: invalid variable name");
                         } catch (NumberFormatException e) {
-
+                            // Expected behavior: variable name is not a number
                         }
 
                         //run function
@@ -201,7 +212,7 @@ public class Parser {
 
                 }
 
-            } else if (state == 3) { //adding key modifiers
+            } else if (state == 3) { // State 3: Adding key modifiers
                 if (text.charAt(i) == '(') { //start arguments
                     state = 2;
 
@@ -231,7 +242,7 @@ public class Parser {
 
 
 
-            } else if (state == 4) { //checking for extra modifiers
+            } else if (state == 4) { // State 4: Checking for extra modifiers
                 if (text.charAt(i) == ')') { //execute and end function
                     if (text.charAt(i-1) != ',' && text.charAt(i-1) != '(') { //if prev is not ( or ,
                         if (variables.containsKey(current_argument_value)) { //put argument
@@ -287,15 +298,64 @@ public class Parser {
                     current_argument_value = current_argument_value + text.charAt(i);
 
                 }
-            }
 
-        } //end scanning
+            } else if (state == 5) { // State 5: Parsing repeat
+                if (text.charAt(i) == '(') {
+                    nestedLevel++;
+                    repeatInner += text.charAt(i);
+                } else if (text.charAt(i) == ')') {
+                    nestedLevel--;
+                    if (nestedLevel == 0) {
+                        // Look back to find the repeat count
+                        String countStr = "";
+                        int j = i - 1; // Position before the closing parenthesis
+                        while (j >= 0 && Character.isDigit(text.charAt(j))) {
+                            countStr = text.charAt(j) + countStr;
+                            j--;
+                        }
+                        if (countStr.isEmpty()) {
+                            throw new ParserException("Missing repeat count before closing parenthesis in " + repeatInner + ")");
+                        }
+                        // Adjust repeatInner to remove the count
+                        repeatInner = repeatInner.substring(0, repeatInner.length() - countStr.length());
+                        repeatCount = Integer.parseInt(countStr);
+
+                        // Execute the repetition
+                        FunctionRepeat repeatFunc = new FunctionRepeat();
+                        repeatFunc.repeat(player, repeatInner, repeatCount, this);
+
+                        // Advance i to the end of this repeat (after the parenthesis)
+                        i = j + countStr.length() + 1; // Position after the closing parenthesis
+                        while (i < text.length() && text.charAt(i) == ' ') {
+                            i++; // Skip spaces after the repeat
+                        }
+
+                        modifiers = new ArrayList<Character>();
+                        effects = (HashMap<String, Double>) default_effects.clone();
+                        current_argument = "";
+                        current_function = "";
+                        argument_num = 1;
+                        duration = 1;
+                        facing = default_facing;
+                        state = 0;
+
+                        repeatInner = ""; // Reset to avoid residual data
+                        repeatCount = 0;
+                    } else {
+                        repeatInner += text.charAt(i);
+                    }
+                } else {
+                    repeatInner += text.charAt(i);
+                }
+            }
+        } // End scanning
 
         if (state == 1 || state == 3) {
             run_function(player, current_function, duration, facing, modifiers, effects);
             modifiers = new ArrayList<Character>();
             effects = (HashMap<String, Double>) default_effects.clone();
             current_argument = "";
+            current_argument_value = "";
             current_function = "";
             argument_num = 1;
             duration = 1;
@@ -305,8 +365,6 @@ public class Parser {
 
         player.finalX = player.xOf;
         player.finalZ = player.zOf;
-
-        return;
     }
 
     //identify and run command
@@ -318,7 +376,8 @@ public class Parser {
                     f.run(player, (int) arg1, facing, modifiers, effects);
                     return;
                 }
-            }}
+            }
+        }
 
         for (SpecialFunction f : specialFunctions) {
             for (String name : f.names()) {
@@ -326,16 +385,25 @@ public class Parser {
                     f.specialRun(player, arg1, this);
                     return;
                 }
-            }}
-
+            }
+        }
 
         throw new ParserException("Unrecognized function \"" + function + "\"");
     }
 
-    //Functions
+/*
+    // Function to reset the parser state
+    private void resetState(ArrayList<Character> modifiers, HashMap<String, Double> effects) {
+        modifiers.clear();
+        effects = (HashMap<String, Double>) default_effects.clone();
+        current_argument = "";
+        current_function = "";
+        argument_num = 1;
+        duration = 1;
+        facing = default_facing;
+        state = 0;
+    }*/
+
     public ArrayList<Function> functions = ParserFunctions.functionInit();
     public ArrayList<SpecialFunction> specialFunctions = ParserFunctions.specialFunctionInit();
-
-
-
 }

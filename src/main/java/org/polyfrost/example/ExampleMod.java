@@ -1,6 +1,9 @@
 package org.polyfrost.example;
 
+import net.minecraft.client.resources.model.ModelResourceLocation;
+import net.minecraft.item.Item;
 import net.minecraftforge.client.ClientCommandHandler;
+import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import org.polyfrost.example.command.ExampleCommand;
@@ -34,7 +37,6 @@ public class ExampleMod {
     public static ExampleMod INSTANCE; // Adds the instance of the mod, so we can access other variables.
     public static TestConfig config;
 
-    //test
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent preEvent) {
         for (int i =0;i<positionQueue.length;i++) {
@@ -48,12 +50,10 @@ public class ExampleMod {
         config = new TestConfig();
         CommandManager.INSTANCE.registerCommand(new ExampleCommand());
 
-        //test macro
         MinecraftForge.EVENT_BUS.register(new TickHandler ());
         MinecraftForge.EVENT_BUS.register(new Labels ());
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new LineStrips ());
         ClientCommandHandler.instance.registerCommand(new simulate ());
-
     }
 }

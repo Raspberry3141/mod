@@ -86,6 +86,7 @@ public class Player extends Entity {
                 tickInput.setW(true);
             } else if (forward ==-1.0F) {
                 tickInput.setS(true);
+                sprinting = false;
             }
             if (strafing ==1.0F) {
                 tickInput.setA(true);

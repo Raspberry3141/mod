@@ -6,6 +6,10 @@ import net.minecraft.client.entity.EntityOtherPlayerMP;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.passive.EntityAnimal;
+import net.minecraft.network.play.client.C03PacketPlayer;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import org.polyfrost.example.testmacro.caculator.functions.Parser;
@@ -24,6 +28,7 @@ public class TickHandler {
     public static ArrayList<MacroInput> inputarry = new ArrayList<>();
     private static int tickLength;
     private static String argument;
+    private int attackTimer = 0;
 
     public static double posX = 0, posY = 0, posZ = 0;
     public static double velX = 0, velY = 0, velZ = 0;
@@ -81,6 +86,22 @@ public class TickHandler {
         Player.yresult.clear();
         Player.zresult.clear();
         (new Parser()).parse(player, argument);
+    }
+
+    @SubscribeEvent
+    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        Minecraft mc = Minecraft.getMinecraft();
+        for (Entity e:Minecraft.getMinecraft().theWorld.loadedEntityList) {
+            if (e !=mc.thePlayer && mc.thePlayer.getDistanceToEntity(e)<=4.2F && attackTimer>5 && e instanceof EntityAnimal && ((EntityLivingBase) e).getHealth()>0) {
+                float yaw = mc.thePlayer.cameraYaw;
+                float pitch = mc.thePlayer.rotationPitch;
+                mc.thePlayer.sendQueue.addToSendQueue(new C03PacketPlayer.C05PacketPlayerLook(yaw,pitch,mc.thePlayer.onGround));
+                mc.playerController.attackEntity(mc.thePlayer,e);
+                mc.thePlayer.swingItem();
+                attackTimer =0;
+            }
+        }
+        attackTimer++;
     }
 
     @SubscribeEvent

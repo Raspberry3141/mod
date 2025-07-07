@@ -1,18 +1,14 @@
 package org.polyfrost.example;
 
-import net.minecraft.client.resources.model.ModelResourceLocation;
-import net.minecraft.item.Item;
+
 import net.minecraftforge.client.ClientCommandHandler;
-import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import org.polyfrost.example.command.ExampleCommand;
-import org.polyfrost.example.config.TestConfig;
 import cc.polyfrost.oneconfig.events.event.InitializationEvent;
 import net.minecraftforge.fml.common.Mod;
-import cc.polyfrost.oneconfig.utils.commands.CommandManager;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import org.polyfrost.example.testmacro.command.simulate;
+import org.polyfrost.example.testmacro.command.teleport;
 import org.polyfrost.example.testmacro.eventhandler.TickHandler;
 import org.polyfrost.example.testmacro.renderer.LineStrips;
 import org.polyfrost.example.testmacro.renderer.labels.Labels;
@@ -35,7 +31,6 @@ public class ExampleMod {
     public static final String VERSION = "@VER@";
     @Mod.Instance(MODID)
     public static ExampleMod INSTANCE; // Adds the instance of the mod, so we can access other variables.
-    public static TestConfig config;
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent preEvent) {
@@ -47,13 +42,11 @@ public class ExampleMod {
     // Register the config and commands.
     @Mod.EventHandler
     public void onInit(FMLInitializationEvent event) {
-        config = new TestConfig();
-        CommandManager.INSTANCE.registerCommand(new ExampleCommand());
-
         MinecraftForge.EVENT_BUS.register(new TickHandler ());
         MinecraftForge.EVENT_BUS.register(new Labels ());
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new LineStrips ());
         ClientCommandHandler.instance.registerCommand(new simulate ());
+        ClientCommandHandler.instance.registerCommand(new teleport());
     }
 }
